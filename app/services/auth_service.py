@@ -5,3 +5,6 @@ class Auth_service() :
         pass
     def user_login() :
         pass
+    
+if __name__ == "__main__" : 
+    pass
