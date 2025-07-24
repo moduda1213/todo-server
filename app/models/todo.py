@@ -17,3 +17,7 @@ class Todos(Base):
     
     # back_populates는 Users 모델의 todos 속성과 연결됨을 의미
     users = relationship("Users", back_populates="todos")
+    
+    # 3. 기능(메소드) 구현
+    def __repr__(self):
+        return f"<User(id={self.id}, title='{self.title}')>"

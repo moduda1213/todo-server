@@ -1,9 +1,9 @@
-from pydantic import BaseModel, Field, ValidationError, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ValidationError, ConfigDict
 from typing import Annotated
 from datetime import datetime
 
 class UserBase(BaseModel) : 
-    email : Annotated[EmailStr, Field(max_length=100, description="사용자 이메일")]
+    email : Annotated[str, Field(max_length=100, description="사용자 이메일")]
     username : Annotated[str, Field(max_length=50, description="사용자 이름")]
     
 class UserCreate(UserBase) :
@@ -34,7 +34,7 @@ class User(UserBase):
  
 class UserInDB(UserBase) : 
     id : int
-    password : Annotated[str, Field(max_length=255, description="사용자 패스워드")]
+    password : Annotated[bytes, Field(max_length=255, description="사용자 패스워드")]
     is_active : Annotated[bool, Field(description="활동 계정")]
     created_at : Annotated[datetime, Field(description="유저 가입 날짜")]
     updated_at : Annotated[datetime, Field(description="유저 정보 업데이트 날짜")]

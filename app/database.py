@@ -6,7 +6,7 @@
 '''
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from core.config import settings
+from app.core.config import settings
 
 # 데이터베이스 엔진 생성
 engine = create_engine(settings.db_url)

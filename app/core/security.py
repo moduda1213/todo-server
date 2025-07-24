@@ -1,7 +1,7 @@
 import bcrypt
 import jwt
 import time
-from config import settings
+from .config import settings
 from datetime import datetime, timedelta
 '''
     bcrypt는 문자열이 아닌 바이트 데이터를 받아 연산합니다
