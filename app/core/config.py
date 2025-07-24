@@ -5,6 +5,9 @@ from pydantic import Field, AliasChoices, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from urllib.parse import quote_plus
 from typing import List
+from pathlib import Path
+
+env_path = Path(__file__).parent.parent.parent / '.env'
 
 class Settings(BaseSettings) :
     db_user: str = Field(validation_alias=AliasChoices("DEV_DB_USER","PRD_DB_URL"))
@@ -18,7 +21,7 @@ class Settings(BaseSettings) :
     
     model_config = SettingsConfigDict(
         case_sensitive=False,
-        env_file = '.env',
+        env_file = env_path,
         env_file_encoding='utf-8',
         extra= 'allow'
     )
@@ -33,6 +36,7 @@ settings = Settings()
     
 if __name__ == "__main__" :
     try:
+        print()
         print(settings.db_url)
     except ValidationError as exc:
         print(repr(exc))
