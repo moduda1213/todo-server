@@ -58,11 +58,8 @@ class UserInDB(UserBase) :
     )
     
 '''
-TokenData 스키마는 JWT(JSON Web Token) 액세스 토큰 안에 저장되는 데이터의       
+  TokenData 스키마는 JWT(JSON Web Token) 액세스 토큰 안에 저장되는 데이터의       
   형식을 정의하는 역할을 합니다.
-
-  조금 더 자세히 설명해 드릴게요.
-
 
    1. 로그인 성공 및 토큰 생성:
        * 사용자가 아이디와 비밀번호로 로그인을 성공하면, 서버는
@@ -117,19 +114,19 @@ class UserLogin(BaseModel):
     )
 
 
-class Token(BaseModel):
+class Access_Token(BaseModel):
     access_token: str
     token_type: str
-    expires_in: int
+    expire_time: int
 
     model_config = ConfigDict(
-        title="인증 토큰",
+        title="엑세스 인증 토큰",
         description="API 응답용 토큰 스키마",
         json_schema_extra={
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "bearer",
-                "expires_in": 3600
+                "expire_time": 3600
             }
         }
     )
@@ -139,6 +136,24 @@ class TokenData(BaseModel):
     username: str | None = None
     email : str | None = None
 
+class Refresh_Token(BaseModel):
+    refresh_token: str
+    expire_time: int
+
+    model_config = ConfigDict(
+        title="리프레시 인증 토큰",
+        description="API 응답용 토큰 스키마",
+        json_schema_extra={
+            "example": {
+                "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "expire_time": 3600
+            }
+        }
+    )
+    
+class Total_Token(BaseModel):
+    access : Access_Token
+    refresh : Refresh_Token
 
 if __name__ == "__main__" : 
     import json

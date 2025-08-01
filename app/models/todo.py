@@ -6,7 +6,7 @@ class Todos(Base):
     __tablename__ = "todos"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id",ondelete="CASCADE"))
     title = Column(String, nullable=False)
     description = Column(String)
     is_completed = Column(Boolean, default=False)

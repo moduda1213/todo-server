@@ -16,6 +16,9 @@ class Settings(BaseSettings) :
     db_name: str = Field(alias="DEV_DB_NAME")
     
     secret_key : str = Field(alias="JWT_SECRET_KEY")
+    algorithm : str = Field(alias="ALGORITHM")
+    access_expire_time : int = Field(alias="ACCESS_TOKEN_EXPIRE_SECONDS")
+    refresh_expire_time : int = Field(alias="REFRESH_TOKEN_EXPIRE_SECONDS")
     
     cors_origins : List[str] = Field(alias="DEV_CORS_ORIGINS")
     
@@ -29,7 +32,8 @@ class Settings(BaseSettings) :
     @property
     def db_url(self) -> str :
         encoded_password = quote_plus(self.db_password)
-        return f"postgresql+psycopg2://{self.db_user}:{encoded_password}@{self.db_host}/{self.db_name}"
+        return f"postgresql+asyncpg://{self.db_user}:{encoded_password}@{self.db_host}/{self.db_name}"
+        # return f"postgresql+psycopg2://{self.db_user}:{encoded_password}@{self.db_host}/{self.db_name}" psycopg2 : 동기
     
 
 settings = Settings()

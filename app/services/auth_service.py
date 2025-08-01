@@ -1,9 +1,9 @@
-from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.schemas import user as user_schema
 from app.models import user as user_model
-from app.core.security import pwd_hashing, verify_password
-from app import UserAlreadyExistsError
+from app.core.security import pwd_hashing, verify_password, create_access_token, create_refresh_token
+from app import UserAlreadyExistsError, UserDoesNotExist, PasswordDoesNotMatch
 
 # 인증 비즈니스 로직 구현
 class Auth_service() :
@@ -13,11 +13,14 @@ class Auth_service() :
         - 이메일 중복 여부 확인
         - 비밀번호 해싱 후 DB에 저장
     '''
-    def user_create(self, db : Session, user : user_schema.UserCreate) :
+    async def user_create(self, db : AsyncSession, user : user_schema.UserCreate) -> user_model.Users :
         
         # 1. 이메일 중복 여부 확인
         # DB에서 요청된 이메일과 일치하는 사용자가 있는지 조회
-        db_user = db.query(user_model.Users).filter(user_model.Users.email == user.email).first()
+        query = select(user_model.Users).filter(user_model.Users.email == user.email)
+        result = await db.execute(query)
+        db_user = result.scalar()
+        #db_user = result.scalars().first()
         
         if db_user :
             raise UserAlreadyExistsError(username=user.username)
@@ -34,46 +37,50 @@ class Auth_service() :
             hashed_password = hashed_password
         )
         
-        # 4. DB에 추가 및 저장
-        db.add(db_user)     # DB 세션에 사용자 객체를 추가
+        # 4. DB 세션에 사용자 객체를 추가
+        db.add(db_user)     
+        await db.flush() # flush를 사용하여 db_user 객체에 id와 같은 기본 정보를 채웁니다.
+        await db.refresh(db_user)
         
         return db_user
         
-    def user_login(self, db : Session, user : user_schema.UserLogin) :
-        
+    async def user_login(self, db : AsyncSession, user : user_schema.UserLogin) -> list[dict] :
         # 1. 가입된 회원인지 확인
-        db_user = db.query(user_model.Users).filter(user_model.Users.email == user.email).first()
-        print(f"{db_user}")
+        query = select(user_model.Users).filter(user_model.Users.email == user.email)
+        result = await db.execute(query)
+        db_user = result.scalar()
+        
         if db_user : 
             pass
         else :
-            raise HTTPException(
-                status_code= status.HTTP_404_NOT_FOUND,
-                detail = "이메일 또는 패스워드가 일치하지 않습니다."
-            )
-            
+            # 이메일이 일치하지 않을 경우
+            raise UserDoesNotExist()
+        
         # 2. 패스워드 검증
         decode_password = verify_password(user.password, db_user.hashed_password)
         if decode_password :
-            return db_user
+            access_token = create_access_token(db_user.email, db_user.username)
+            refresh_token = create_refresh_token(db_user.email, db_user.username)
+            return {
+                "access" : access_token, 
+                "refresh" : refresh_token
+            }
         else :
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="이메일 또는 패스워드가 일치하지 않습니다."
-            )
-            
+            # 패스워드가 일치하지 않을 경우
+            raise PasswordDoesNotMatch()
         
     
 if __name__ == "__main__" : 
-    '''
-            서비스 계층 : 데이터 유효성 검사, 계산, DB와 상호작용하는 비즈니스로직을 처리하는 곳
-            => HTTP에 대해서는 처리하는 곳이 아니기 때문에 
-            
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="이미 사용중인 이메일입니다."
-            )
-            ---------------------
-             raise UserAlreadyExistsError(username=user.username) 처리
-        '''
     pass
+
+'''
+    서비스 계층 : 데이터 유효성 검사, 계산, DB와 상호작용하는 비즈니스로직을 처리하는 곳
+    => HTTP에 대해서는 처리하는 곳이 아니기 때문에 
+    
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="이미 사용중인 이메일입니다."
+    )
+    ---------------------
+        raise UserAlreadyExistsError(username=user.username) 처리
+'''

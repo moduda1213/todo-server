@@ -4,6 +4,38 @@
   주입)으로 데이터베이스 세션을 빌려 쓰고 반납할 수 있도록 해주는 공장(Factory)   
   같은 역할을 합니다.
 '''
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import declarative_base
+from app.core.config import settings
+from typing import AsyncGenerator
+
+async_engine = create_async_engine(settings.db_url)
+
+AsyncSesionLocal = async_sessionmaker(
+    bind = async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
+Base = declarative_base()
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSesionLocal() as session :
+        yield session
+
+if __name__ == "__main__" :
+    print("데이터베이스 연결 테스트 시작...")
+    print(f"데이터베이스 URL : {settings.db_url}")
+    try:
+        # with engine.connect() as connection: # SQLAlchemy 2.0 style
+        session = async_engine.connect()
+        print("✅ 데이터베이스 연결 성공!" )
+        session.close()
+    except Exception as e:
+        print(f"❌ 데이터베이스 연결 실패:  {e}")
+        
+'''
+@@ 동기 방식 DB조회
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
@@ -25,16 +57,4 @@ def get_db():
     finally:
         db.close() # 요청 처리 끝나면 세션 닫기
     
-    
-
-if __name__ == "__main__" :
-    print("데이터베이스 연결 테스트 시작...")
-    print(f"데이터베이스 URL : {settings.db_url}")
-    try:
-        # with engine.connect() as connection: # SQLAlchemy 2.0 style
-        session = engine.connect()
-        print("✅ 데이터베이스 연결 성공!" )
-        session.close()
-    except Exception as e:
-        print(f"❌ 데이터베이스 연결 실패:  {e}")
-        
+'''

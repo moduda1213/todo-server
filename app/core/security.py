@@ -8,6 +8,10 @@ from datetime import datetime, timedelta
         => 암호화 알고리즘은 '문자(text)'라는 추상적인 개념을 직접 다루지 못하고, 
             '바이트(bytes)'라는 구체적인 데이터 단위를 다루기 때문
 '''
+_algorithm = settings.algorithm
+_secret_key = settings.secret_key
+_access_expire_time = settings.access_expire_time
+_refresh_expire_time = settings.refresh_expire_time
 
 # 비밀번호 해싱 (bcrypt)
 # bcrypt.haspw( bytes, bytes )
@@ -23,9 +27,10 @@ def verify_password(pwd : str, hashed_pwd : bytes) -> bool :
     result = bcrypt.checkpw(password, hashed_pwd) 
     return result
     
-# JWT 토큰 생성 
-def create_access_token(email : str, username : str) -> str: 
-    expiration_time = datetime.now() + timedelta(minutes=1)
+# ACCESS_JWT 토큰 생성 
+def create_access_token(email : str, username : str) -> dict: 
+    
+    expiration_time = datetime.now() + timedelta(seconds=_access_expire_time)
     expiration_timestamp = int(time.mktime(expiration_time.timetuple()))
     payload = {
         "email" : email,
@@ -37,17 +42,42 @@ def create_access_token(email : str, username : str) -> str:
         1. 널리 사용되고 있음
         2. 단일 서버에서 JWT를 발급하고 검증하는 경우, HS256과 같은 대칭 키 알고리즘을 사용해도 충분
     '''
-    algorithm = 'HS256'
-    secret_key = settings.secret_key
-    token = jwt.encode(payload, secret_key, algorithm)
-    return token
+    
+    token = jwt.encode(payload, _secret_key, _algorithm)
+    
+    token_info = {
+        "access_token": token,
+        "token_type": "bearer",
+        "expire_time": _access_expire_time
+    }
+    return token_info
     
 
-# 디코딩 함수 구현
-def decode_token(token : str) -> dict : 
-    decode_payload = jwt.decode(token, settings.secret_key, algorithms=['HS256'])
+# ACCESS_JWT 디코딩 함수 구현
+def decode_access_token(token : str) -> dict : 
+    try :
+        decode_payload = jwt.decode(token, _secret_key, algorithms=_algorithm)
+    except :
+        decode_payload = None
+        
     return decode_payload
 
+
+# REFRESH_TOKEN 생성
+def create_refresh_token(email:str, username:str) -> dict :
+    expiration_time = datetime.now() + timedelta(seconds=_refresh_expire_time)
+    expiration_timestamp = int(time.mktime(expiration_time.timetuple()))
+    payload = {
+        "email" : email,
+        "username" : username,
+        "exp" : expiration_timestamp
+    }
+    token = jwt.encode(payload, _secret_key, _algorithm)
+    token_info = {
+        "refresh_token": token,
+        "expire_time": _refresh_expire_time
+    }
+    return token_info
 
 if __name__ == '__main__' : 
     test_pwd = "super password"
@@ -62,7 +92,19 @@ if __name__ == '__main__' :
     print(f"time.mktime : {int(time.mktime((datetime.now() + timedelta(minutes=1)).timetuple()))}") # datetime : 1752889118
     
     test_token = create_access_token("test", "testtest")
-    decode_token(test_token)
+    print(f"test_access_token : {test_token} , {test_token.__class__}")
+    dec_test_token = decode_access_token(test_token.get("access_token"))
+    print(f"test_decode_access_token : {dec_test_token} , {dec_test_token.__class__}")
+    # {'email': 'test', 'username': 'testtest', 'exp': 1754025630}
+    test_token = create_refresh_token("test", "testtest")
+    print(f"test_decode_refresh_token : {test_token} , {test_token.__class__}")
     
     
+'''
+    로그인 ( 엑세스토큰(수명 짧음) / 리프레시 토큰(수명 김) ) 
+        ->  api요청 *(엑세스토큰)
+            -> 엑세스토큰 만료 시 리프레시 토큰 검증 
+                -> 검증 성공 시 새로운 엑세스 토큰 + 리프레시 토큰 재발금 (기존 리프레시토큰 무효화)
+                    -> 다시 api요청
+'''
 
