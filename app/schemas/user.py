@@ -132,10 +132,6 @@ class Access_Token(BaseModel):
     )
 
 
-class TokenData(BaseModel):
-    username: str | None = None
-    email : str | None = None
-
 class Refresh_Token(BaseModel):
     refresh_token: str
     expire_time: int
@@ -154,6 +150,10 @@ class Refresh_Token(BaseModel):
 class Total_Token(BaseModel):
     access : Access_Token
     refresh : Refresh_Token
+    
+class TokenData(BaseModel):
+    username: str | None = None
+    email : str | None = None
 
 if __name__ == "__main__" : 
     import json

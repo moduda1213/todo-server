@@ -43,21 +43,26 @@ class Auth_service() :
         await db.refresh(db_user)
         
         return db_user
-        
+    
+    '''
+        로그인 함수
+        - 이메일 검증 & 패스워드 검증
+        - access, refresh token 발급
+    '''
     async def user_login(self, db : AsyncSession, user : user_schema.UserLogin) -> list[dict] :
         # 1. 가입된 회원인지 확인
         query = select(user_model.Users).filter(user_model.Users.email == user.email)
         result = await db.execute(query)
         db_user = result.scalar()
         
-        if db_user : 
-            pass
-        else :
+        if db_user is None : 
             # 이메일이 일치하지 않을 경우
             raise UserDoesNotExist()
         
         # 2. 패스워드 검증
         decode_password = verify_password(user.password, db_user.hashed_password)
+        
+        # 2-1. 성공시 access_token + refresh_token 발급
         if decode_password :
             access_token = create_access_token(db_user.email, db_user.username)
             refresh_token = create_refresh_token(db_user.email, db_user.username)
@@ -68,7 +73,16 @@ class Auth_service() :
         else :
             # 패스워드가 일치하지 않을 경우
             raise PasswordDoesNotMatch()
+    
+    async def get_user_by_email(self, db: AsyncSession, email : str) -> user_schema.User :
+        query = select(user_model.Users).filter(user_model.Users.email == email)
+        result = await db.execute(query)
+        user = result.scalar()
         
+        if user == None :
+            raise UserDoesNotExist()
+        
+        return user
     
 if __name__ == "__main__" : 
     pass

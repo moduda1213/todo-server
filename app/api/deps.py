@@ -1,15 +1,67 @@
 # JWT 토큰 검증 && 현재 사용자 정보 가져오는 의존성함수 구현
-from fastapi import Cookie, HTTPException, status
+from fastapi import Depends, Cookie, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.schemas import user as user_schema
 from app.core.security import decode_access_token
+from app.database import get_db
+from app.services.auth_service import Auth_service
+from app import UserDoesNotExist
+
+import jwt
 
 # JWT 토큰을 검증하고 현재 사용자 정보를 가져오는 의존성 함수
-async def get_current_user(access_token: str | None = Cookie(None)) :
-    try :
-        decode_info = decode_access_token(access_token)
+async def get_current_user(
+    db : AsyncSession = Depends(get_db),
+    access_token: str | None = Cookie(None)
+    ) -> user_schema.User :
+    print(f"access_token : {access_token}")
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
         
-    except Exception as e :
-        print(f"Error : {e}")
-
+    if access_token is None : # is : 참조, == : 값
+        raise credentials_exception
+    
+    # 액세스 토큰 디코딩
+    try :
+        payload = decode_access_token(access_token)
+        
+        user_email : str | None =  payload.get("email")
+        if user_email is None :
+            raise credentials_exception
+        
+        auth_service = Auth_service()
+        user = await auth_service.get_user_by_email(db, user_email)
+        
+        return user
+    
+    # jwt 만료 에러
+    except jwt.ExpiredSignatureError : 
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="토큰이 만료되었습니다.",
+            headers={"WWW-Authenticate" : "Bearer"},
+        )
+        
+    # 만료 에러 외 모든 JWT에러
+    except jwt.InvalidTokenError :
+        raise credentials_exception
+    
+    except UserDoesNotExist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="존재하지 않는 이메일입니다."
+        )
+    except SQLAlchemyError : 
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="서버 내부 오류가 발생하였습니다."
+        )
 
 
 # async def는 'I/O 작업'을 할 때 사용합니다.

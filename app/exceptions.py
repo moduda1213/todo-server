@@ -6,10 +6,10 @@ class UserAlreadyExistsError(Exception):
 
 """사용자가 존재하지 않을 때 발생하는 예외"""
 class UserDoesNotExist(Exception):
-    def __init__(self, username : str) :
-        super().__init__("Your email or password does not match.")
+    def __init__(self, detail : str = "Your email or password does not match.") :
+        super().__init__(detail)
 
 """패스워드가 일치하지 않을 때 발생하는 예외"""
 class PasswordDoesNotMatch(Exception):
-    def __init__(self, username : str) :
-        super().__init__("Your email or password does not match.")
+    def __init__(self, detail : str = "Your email or password does not match.") :
+        super().__init__(detail)

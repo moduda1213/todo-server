@@ -3,10 +3,12 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import APIRouter, status, Depends, HTTPException, Response
 from app.schemas import user as user_schema
 
-from app.database import get_db
 from app.services.auth_service import Auth_service
+from app.database import get_db
+from app.api.deps import get_current_user
 
 from app import UserAlreadyExistsError, UserDoesNotExist, PasswordDoesNotMatch
+import jwt
 
 # APIRouter 객체 생성
 # tags : API 문서에서 엔드포인트를 그룹화하는데 사용
@@ -90,12 +92,19 @@ async def login(
     except UserDoesNotExist:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="이메일 또는 패스워드가 일치하지 않습니다."
+            detail="존재하지 않는 이메일입니다."
         )
     except PasswordDoesNotMatch:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 패스워드가 일치하지 않습니다."
+        )
+    except jwt.InvalidTokenError as e:
+        print(f"JWT 관련 작업 중 에러가 발생하였습니다. : {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
      # --- 가장 중요한 수정 부분 ---
     except Exception as e:
@@ -105,5 +114,8 @@ async def login(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="서버 내부 오류가 발생했습니다. 관리자에게 문의하세요."
         )
+
+@router.get("/me", response_model=user_schema.User)
+async def read_users_me(current_user : user_schema.User = Depends(get_current_user)) :
     
-        
+    return current_user

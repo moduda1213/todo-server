@@ -55,11 +55,8 @@ def create_access_token(email : str, username : str) -> dict:
 
 # ACCESS_JWT 디코딩 함수 구현
 def decode_access_token(token : str) -> dict : 
-    try :
-        decode_payload = jwt.decode(token, _secret_key, algorithms=_algorithm)
-    except :
-        decode_payload = None
-        
+    decode_payload = jwt.decode(token, _secret_key, algorithms=_algorithm)
+    
     return decode_payload
 
 
